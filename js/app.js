@@ -459,14 +459,14 @@ const PG = {
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
           <div>
             <h5 class="mb-0 fw-bold">Data Guru</h5>
-            <small class="mut">Kelola data guru, wali kelas, dan guru wali murid. Dipakai otomatis di Data Siswa dan tanda tangan laporan</small>
+            <small class="mut">Kelola data guru, wali kelas, dan Guru Wali. Dipakai otomatis di Data Siswa dan tanda tangan laporan</small>
           </div>
           ${isAdmin ? `<button class="btn-pri flex-grow-1 flex-md-grow-0" onclick="bukaFormGuru()"><i class="bi bi-person-plus-fill"></i> Tambah Guru</button>` : ''}
         </div>
         <div class="row g-2 align-items-end mt-2">
           <div class="col-12 col-md-7"><label class="mb-1" for="gr_q">Cari Nama / NIP / Jabatan</label><input id="gr_q" class="form-control" placeholder="Ketik nama, NIP, atau jabatan..." oninput="filterGuru()"></div>
           <div class="col-12 col-md-5"><label class="mb-1" for="gr_f">Filter Peran</label>
-            <select id="gr_f" class="form-select" onchange="filterGuru()"><option value="">Semua</option><option value="wk">Wali Kelas</option><option value="wm">Wali Murid</option><option value="no">Bukan Wali</option></select></div>
+            <select id="gr_f" class="form-select" onchange="filterGuru()"><option value="">Semua</option><option value="wk">Wali Kelas</option><option value="wm">Guru Wali</option><option value="no">Bukan Wali</option></select></div>
         </div>
       </div>
       <div id="gr_kpi"></div>
@@ -2667,7 +2667,7 @@ function loadGuru() {
     if (k) k.innerHTML = `<div class="row g-2 mb-3">
       <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Total Guru</small><b>${_allGuru.length}</b></div></div>
       <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Wali Kelas</small><b style="color:var(--pri)">${_allGuru.filter(g => g.waliKelas).length}</b></div></div>
-      <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Wali Murid</small><b style="color:var(--ok)">${_allGuru.filter(g => g.waliMurid).length}</b></div></div>
+      <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Guru Wali</small><b style="color:var(--ok)">${_allGuru.filter(g => g.waliMurid).length}</b></div></div>
     </div>`;
     filterGuru();
   });
@@ -2686,7 +2686,7 @@ function guruPeranHtml(g) {
   if (g.waliKelas) a.push(`<span class="bs ok"><i class="bi bi-mortarboard-fill"></i> Wali Kelas ${esc(g.kelas)}</span>`);
   if (g.waliMurid) {
     const n = g.murid || [];
-    a.push(`<span class="bs iz"><i class="bi bi-people-fill"></i> Wali Murid (${n.length})</span>`);
+    a.push(`<span class="bs iz"><i class="bi bi-people-fill"></i> Guru Wali (${n.length})</span>`);
     if (n.length) a.push(`<small class="mut d-block mt-1" style="max-width:260px">${n.slice(0, 3).map(m => esc(m.nama)).join(', ')}${n.length > 3 ? ' +' + (n.length - 3) + ' lainnya' : ''}</small>`);
   }
   return a.length ? a.join(' ') : '<span class="mut small">-</span>';
@@ -2779,7 +2779,7 @@ function formGuru(id) {
           <select id="fg_kelas" class="form-select"><option value="">— Pilih kelas —</option>${kelasAll.map(k => `<option value="${esc(k)}"${(g.kelas || '').toUpperCase() === k.toUpperCase() ? ' selected' : ''}${kelasAmbil[k.toUpperCase()] ? ' disabled' : ''}>${esc(k)}${kelasAmbil[k.toUpperCase()] ? ' (wali: ' + esc(kelasAmbil[k.toUpperCase()]) + ')' : ''}</option>`).join('')}</select></div>
       </div>
 
-      <label for="fg_wm">Wali Murid?</label>
+      <label for="fg_wm">Guru Wali?</label>
       <select id="fg_wm" class="form-select" onchange="togGuruPeran()"><option value="Tidak"${wm ? '' : ' selected'}>Tidak</option><option value="Ya"${wm ? ' selected' : ''}>Ya</option></select>
       <div id="fg_wm_box" class="mt-2 p-2 border rounded" style="${wm ? '' : 'display:none'};background:var(--card)">
         <div class="row g-2 align-items-end">
