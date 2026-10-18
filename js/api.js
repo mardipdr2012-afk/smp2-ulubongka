@@ -83,7 +83,7 @@ function apiLogout(token) {
 // 2) Prefetch halaman utama setelah masuk, sehingga pindah menu terasa instan.
 // 3) Pemanasan server (ping) agar Apps Script tidak "dingin" saat pertama kali dipakai.
 // ============================================
-const RC_READ = new Set(['dashboard', 'rekap', 'peringkat', 'pelList', 'rekapPelanggaran', 'kartuQr', 'siswaList', 'akunList', 'cfgGet', 'kategori', 'siswaRingkas', 'hariGet']);
+const RC_READ = new Set(['dashboard', 'rekap', 'peringkat', 'pelList', 'rekapPelanggaran', 'kartuQr', 'siswaList', 'akunList', 'cfgGet', 'kategori', 'siswaRingkas', 'hariGet', 'guruList']);
 const RC_MAX_AGE = 15 * 60 * 1000;      // data lebih tua dari ini tidak dipakai
 const RC_LS_PREFIX = 'rc2:';
 const RC_LS_MAX = 350000;               // batas ukuran per entri di localStorage
@@ -171,7 +171,7 @@ const go = (a, p, f) => {
 function prefetchApp() {
   if (!S.u || !S.t) return;
   const admin = String(S.u.role || '').toLowerCase().includes('admin');
-  const jobs = [['dashboard', 0], ['siswaRingkas', 0], ['hariGet', 0], ['siswaList', { q: '', kelas: '', status: '' }], ['pelList', 0]];
+  const jobs = [['dashboard', 0], ['siswaRingkas', 0], ['hariGet', 0], ['siswaList', { q: '', kelas: '', status: '' }], ['guruList', 0], ['pelList', 0]];
   if (admin) jobs.push(['akunList', 0], ['cfgGet', 0]);
   let i = 0;
   const next = () => {

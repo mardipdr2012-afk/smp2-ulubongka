@@ -199,19 +199,25 @@ const NAV = {
     ['dash', 'Dasboard', 'speedometer2'],
     ['scan', 'Scan', 'qr-code-scan'],
     ['siswa', 'Data Siswa', 'people'],
+    ['guru', 'Data Guru', 'person-badge'],
     ['rekap', 'Rekap Presensi', 'table'],
     ['pel', 'Pelanggaran', 'exclamation-triangle'],
     ['rekap_pel', 'Rekap Pelanggaran', 'file-earmark-ruled'],
+    ['prestasi', 'Prestasi Siswa', 'award'],
+    ['rekap_prestasi', 'Rekap Prestasi', 'file-earmark-bar-graph'],
     ['rank', 'Peringkat', 'trophy']
   ],
   admin: [
     ['dash', 'Dasboard', 'speedometer2'],
     ['scan', 'Scan', 'qr-code-scan'],
     ['siswa', 'Data Siswa', 'people'],
+    ['guru', 'Data Guru', 'person-badge'],
     ['akun', 'Kelola Akun', 'person-gear'],
     ['rekap', 'Rekap Presensi', 'table'],
     ['pel', 'Pelanggaran', 'exclamation-triangle'],
     ['rekap_pel', 'Rekap Pelanggaran', 'file-earmark-ruled'],
+    ['prestasi', 'Prestasi Siswa', 'award'],
+    ['rekap_prestasi', 'Rekap Prestasi', 'file-earmark-bar-graph'],
     ['rank', 'Peringkat', 'trophy'],
     ['admin', 'Pengaturan', 'gear']
   ]
@@ -446,6 +452,84 @@ const PG = {
     `;
     loadSiswa();
   },
+  guru() {
+    const isAdmin = S.u && S.u.role === 'admin';
+    $('view').innerHTML = `
+      <div class="cardx">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+          <div>
+            <h5 class="mb-0 fw-bold">Data Guru</h5>
+            <small class="mut">Kelola data guru, wali kelas, dan guru wali murid. Dipakai otomatis di Data Siswa dan tanda tangan laporan</small>
+          </div>
+          ${isAdmin ? `<button class="btn-pri flex-grow-1 flex-md-grow-0" onclick="bukaFormGuru()"><i class="bi bi-person-plus-fill"></i> Tambah Guru</button>` : ''}
+        </div>
+        <div class="row g-2 align-items-end mt-2">
+          <div class="col-12 col-md-7"><label class="mb-1" for="gr_q">Cari Nama / NIP / Jabatan</label><input id="gr_q" class="form-control" placeholder="Ketik nama, NIP, atau jabatan..." oninput="filterGuru()"></div>
+          <div class="col-12 col-md-5"><label class="mb-1" for="gr_f">Filter Peran</label>
+            <select id="gr_f" class="form-select" onchange="filterGuru()"><option value="">Semua</option><option value="wk">Wali Kelas</option><option value="wm">Wali Murid</option><option value="no">Bukan Wali</option></select></div>
+        </div>
+      </div>
+      <div id="gr_kpi"></div>
+      <div id="gr_list"></div>
+    `;
+    loadGuru();
+  },
+  prestasi() {
+    const d = new Date(), iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    $('view').innerHTML = `
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <form class="cardx" onsubmit="savePrestasi(event)">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0">Catat Prestasi Siswa</h5>
+              <button type="button" class="btn-out btn-sm" onclick="nav('rekap_prestasi')"><i class="bi bi-file-earmark-bar-graph me-1"></i> Rekap Prestasi</button>
+            </div>
+            <label for="pr_s">Siswa (Nama / NIS) <span class="text-danger">*</span></label>
+            <input id="pr_s" class="form-control" autocomplete="off" placeholder="Ketik nama atau NIS siswa..." oninput="cariSiswaPr(this.value)" required>
+            <div id="pr_c" class="sug"></div>
+            <input type="hidden" id="pr_id">
+            <label for="pr_t">Tanggal <span class="text-danger">*</span></label>
+            <input id="pr_t" type="date" class="form-control" value="${iso}" max="${iso}" required onchange="hariPr()">
+            <small class="mut" id="pr_h"></small>
+            <label for="pr_j">Jenis Prestasi <span class="text-danger">*</span></label>
+            <select id="pr_j" class="form-select"><option value="Akademik">Akademik</option><option value="Non-Akademik">Non-Akademik</option></select>
+            <label for="pr_n">Nama Prestasi <span class="text-danger">*</span></label>
+            <input id="pr_n" class="form-control" maxlength="200" required placeholder="Contoh: Juara 1 Olimpiade Matematika Tingkat Kabupaten">
+            <button class="btn-pri w-100 mt-4"><i class="bi bi-award-fill me-1"></i> Simpan Prestasi</button>
+          </form>
+        </div>
+        <div class="col-lg-7" id="pr_l"></div>
+      </div>
+    `;
+    hariPr();
+    loadPrestasi();
+  },
+  rekap_prestasi() {
+    const R = S.rk_pr = S.rk_pr || { bulan: bulanIni(), kelas: '', jenis: '', q: '' };
+    $('view').innerHTML = `
+      <div class="cardx">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="mb-0 fw-bold">Rekapitulasi Prestasi Siswa</h5>
+            <small class="mut">Laporan prestasi akademik dan non-akademik siswa. Kosongkan bulan untuk melihat semua periode</small>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn-out flex-grow-1 flex-md-grow-0" onclick="nav('prestasi')"><i class="bi bi-plus-circle me-1"></i> Catat Prestasi</button>
+            <button class="btn-pri flex-grow-1 flex-md-grow-0" onclick="cetakRekapPrestasi()"><i class="bi bi-printer"></i> Cetak / Ekspor PDF</button>
+          </div>
+        </div>
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-3"><label for="rpr_b" class="mb-1">Bulan</label><input id="rpr_b" type="month" class="form-control" value="${R.bulan}" onchange="S.rk_pr.bulan=this.value;loadRekapPrestasi()"></div>
+          <div class="col-6 col-md-3"><label for="rpr_k" class="mb-1">Kelas</label><select id="rpr_k" class="form-select" onchange="S.rk_pr.kelas=this.value;loadRekapPrestasi()"><option value="">Semua Kelas</option></select></div>
+          <div class="col-6 col-md-3"><label for="rpr_j" class="mb-1">Jenis</label><select id="rpr_j" class="form-select" onchange="S.rk_pr.jenis=this.value;loadRekapPrestasi()"><option value="">Semua Jenis</option><option value="Akademik"${R.jenis === 'Akademik' ? ' selected' : ''}>Akademik</option><option value="Non-Akademik"${R.jenis === 'Non-Akademik' ? ' selected' : ''}>Non-Akademik</option></select></div>
+          <div class="col-6 col-md-3"><label for="rpr_q" class="mb-1">Cari</label><input id="rpr_q" class="form-control" placeholder="Nama, NIS, prestasi..." value="${esc(R.q)}" oninput="clearTimeout(S.dpr);S.dpr=setTimeout(()=>{S.rk_pr.q=this.value;loadRekapPrestasi()},350)"></div>
+        </div>
+      </div>
+      <div id="rpr_kpi"></div>
+      <div id="rpr_list"></div>
+    `;
+    loadRekapPrestasi();
+  },
   akun() {
     $('view').innerHTML = `
       <div class="cardx">
@@ -645,7 +729,10 @@ const PG = {
           <h5 class="mb-0 fw-bold">Rekapitulasi Presensi Siswa</h5>
           <small class="mut">Laporan kehadiran, keterlambatan, dan persentase kehadiran bulanan</small>
         </div>
-        <button class="btn-pri flex-grow-1 flex-md-grow-0" onclick="cetakRekap()"><i class="bi bi-printer"></i> Cetak / Simpan PDF</button>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn-out flex-grow-1 flex-md-grow-0" onclick="cetakRekap()"><i class="bi bi-printer"></i> Cetak Hasil</button>
+          <button class="btn-pri flex-grow-1 flex-md-grow-0" onclick="cetakRekapLengkap()"><i class="bi bi-printer-fill"></i> Cetak Lengkap</button>
+        </div>
       </div>
       <div class="row g-2 align-items-end">
         <div class="col-6 col-md-3"><label for="rb" class="mb-1">Bulan</label><input id="rb" type="month" class="form-control" value="${R.bulan}" onchange="S.rk.bulan=this.value;loadRekap()"></div>
@@ -1154,8 +1241,8 @@ function loadRekap() {
     d = d || { rows: [], kelas: [], hari: 0 };
     S.lastRekap = d;
     const k = $('rk'); if (k && k.options.length < 2 && d.kelas) { d.kelas.forEach(x => k.add(new Option(x, x))); k.value = S.rk.kelas; }
-    rt.innerHTML = `<div class="cardx"><div class="d-flex justify-content-between align-items-center mb-2"><small class="mut">${d.hari || 0} hari efektif tercatat</small><small class="mut d-md-none" style="font-size:11px"><i class="bi bi-arrow-left-right me-1"></i>Geser ke samping</small></div><div class="tw"><table class="tbl"><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Hadir</th><th>Telat</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>%</th><th class="text-center">Kirim WA Ortu</th></tr></thead><tbody>
-    ${(d.rows || []).map(r => `<tr><td><b>${esc(r.nama)}</b><small class="mut">NIS: ${esc(r.nis)}${r.nisn ? ' • NISN: ' + esc(r.nisn) : ''}</small></td><td><span class="bs mu">${esc(r.kelas)}</span></td><td><b style="color:var(--ok)">${r.hadir}</b></td><td><b class="text-warning">${r.telat}</b></td><td>${r.izin}</td><td>${r.sakit}</td><td><b class="${r.alpa > 0 ? 'text-danger' : 'mut'}">${r.alpa}</b></td><td><b>${r.pct}%</b></td><td class="text-center">${r.waUrl ? `<a href="${r.waUrl}" target="_blank" class="btn-wa btn-wa-sm" title="Kirim Rekapitulasi Presensi Bulanan ke WhatsApp Orang Tua"><i class="bi bi-whatsapp"></i> Kirim WA</a>` : '<span class="mut small">-</span>'}</td></tr>`).join('') || '<tr><td colspan="9" class="text-center py-3 mut">Tidak ada data.</td></tr>'}</tbody></table></div></div>`;
+    rt.innerHTML = `<div class="cardx"><div class="d-flex justify-content-between align-items-center mb-2"><small class="mut">${d.hari || 0} hari efektif tercatat</small><small class="mut d-md-none" style="font-size:11px"><i class="bi bi-arrow-left-right me-1"></i>Geser ke samping</small></div><div class="tw"><table class="tbl"><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Hadir</th><th>Telat</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>%</th><th>Rata² Datang</th><th>Rata² Pulang</th><th class="text-center">Kirim WA Ortu</th><th class="text-center">Detail</th></tr></thead><tbody>
+    ${(d.rows || []).map(r => `<tr><td><b>${esc(r.nama)}</b><small class="mut">NIS: ${esc(r.nis)}${r.nisn ? ' • NISN: ' + esc(r.nisn) : ''}</small></td><td><span class="bs mu">${esc(r.kelas)}</span></td><td><b style="color:var(--ok)">${r.hadir}</b></td><td><b class="text-warning">${r.telat}</b></td><td>${r.izin}</td><td>${r.sakit}</td><td><b class="${r.alpa > 0 ? 'text-danger' : 'mut'}">${r.alpa}</b></td><td><b>${r.pct}%</b></td><td class="text-nowrap">${r.avg != null ? hm(r.avg) : '-'}</td><td class="text-nowrap">${r.avgPulang != null ? hm(r.avgPulang) : '-'}</td><td class="text-center">${r.waUrl ? `<a href="${r.waUrl}" target="_blank" class="btn-wa btn-wa-sm" title="Kirim Rekapitulasi Presensi Bulanan ke WhatsApp Orang Tua"><i class="bi bi-whatsapp"></i> Kirim WA</a>` : '<span class="mut small">-</span>'}</td><td class="text-center"><button class="btn-out" style="min-height:32px;padding:3px 10px;font-size:12px" onclick="detailRekap('${esc(r.id)}')"><i class="bi bi-clock-history"></i> Jam</button></td></tr>`).join('') || '<tr><td colspan="12" class="text-center py-3 mut">Tidak ada data.</td></tr>'}</tbody></table></div></div>`;
   });
 }
 
@@ -1192,6 +1279,84 @@ function blokTtdHtml(rows, tglCetak) {
   return `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:28px 16px;margin-top:28px;page-break-inside:avoid;font-size:12px">${kepsek}${wali.join('')}</div>`;
 }
 
+// Tanda tangan rekap pelanggaran: Kepala Sekolah + guru wali murid dari siswa yang tampil di laporan
+function blokTtdPelHtml(rows, tglCetak) {
+  const titik = '....................................................';
+  const blok = (atas, jabatan, nama, nip) => `
+    <div style="text-align:center;width:230px">
+      <div>${atas}</div>
+      <div style="margin-bottom:60px">${jabatan}</div>
+      <div style="font-weight:bold;text-decoration:underline">${nama}</div>
+      <div>NIP. ${nip}</div>
+    </div>`;
+  const per = {};
+  (rows || []).forEach(r => { const n = String(r.waliMurid || '').trim(); if (n && !(n in per)) per[n] = r.nipWaliMurid || ''; });
+  const names = Object.keys(per).sort();
+  const kepsek = blok('Mengetahui,', 'Kepala SMP Negeri 2 Ulubongka', esc(KEPSEK.nama), esc(KEPSEK.nip));
+  const wali = (names.length ? names : ['']).map(n => blok('Ulubongka, ' + tglCetak, 'Guru Wali Murid', n ? esc(n) : titik, n && per[n] ? esc(per[n]) : '.................................'));
+  return `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:28px 16px;margin-top:28px;page-break-inside:avoid;font-size:12px">${kepsek}${wali.join('')}</div>`;
+}
+
+// Detail jam datang & pulang satu siswa (dari tombol "Jam" di tabel rekap)
+function detailRekap(id) {
+  call('rekapDetail', { bulan: S.rk.bulan, id_siswa: id }).then(d => {
+    const s = (d.siswa || [])[0];
+    if (!s) return toast('Data siswa tidak ditemukan.', 'err');
+    openModal(`
+      <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <div><h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>${esc(s.nama)}</h5>
+        <small class="mut">NIS ${esc(s.nis)} • Kelas ${esc(s.kelas)} • ${esc(formatBulanIndo(d.bulan))}</small></div>
+        <div class="d-flex gap-2"><button type="button" class="btn-pri" onclick="window.print()"><i class="bi bi-printer-fill"></i></button><button type="button" class="btn-out" onclick="closeModal()">Tutup</button></div>
+      </div>
+      <div class="tw"><table class="tbl"><thead><tr><th>Hari, Tanggal</th><th>Status</th><th>Jam Datang</th><th>Jam Pulang</th><th>Terlambat</th></tr></thead><tbody>
+      ${s.list.map(r => `<tr><td class="text-nowrap">${hariTgl(r.tanggal)}</td><td>${bdg(r.status)}</td><td><b>${r.masuk ? esc(r.masuk) + ' WITA' : '-'}</b></td><td><b>${r.pulang ? esc(r.pulang) + ' WITA' : '-'}</b></td><td>${r.menit ? '+' + r.menit + ' menit' : '-'}</td></tr>`).join('') || '<tr><td colspan="5" class="text-center py-3 mut">Belum ada catatan presensi pada bulan ini.</td></tr>'}
+      </tbody></table></div>`, 'modal-lg');
+  }).catch(() => {});
+}
+
+// Cetak Lengkap: seluruh catatan harian (jam datang & pulang) per siswa sesuai filter rekap
+function cetakRekapLengkap() {
+  call('rekapDetail', { bulan: S.rk.bulan, kelas: S.rk.kelas, q: S.rk.q }).then(d => {
+    const sw = d.siswa || [];
+    if (!sw.length) return toast('Belum ada data rekapitulasi untuk dicetak.', 'err');
+    const periode = formatBulanIndo(d.bulan), tglCetak = formatTanggalIndo(new Date());
+    const filterKls = S.rk.kelas ? 'Kelas ' + esc(S.rk.kelas) : 'Semua Kelas';
+    const c = 'border:1px solid #333;padding:4px 6px;';
+    const body = sw.map(s => {
+      const n = k => s.list.filter(r => r.status === k).length;
+      const head = `<tr style="background:#e2e8f0;page-break-inside:avoid"><td colspan="7" style="${c}font-weight:bold">${esc(s.nama)} <span style="font-weight:normal">• NIS ${esc(s.nis)} • Kelas ${esc(s.kelas)} • Hadir ${n('Hadir')}, Telat ${n('Terlambat')}, Izin ${n('Izin')}, Sakit ${n('Sakit')}, Alpa ${n('Alpa')}</span></td></tr>`;
+      const rows = s.list.map((r, i) => `<tr style="page-break-inside:avoid"><td style="${c}text-align:center">${i + 1}</td><td style="${c}white-space:nowrap">${hariTgl(r.tanggal)}</td><td style="${c}text-align:center">${esc(r.status)}</td><td style="${c}text-align:center">${r.masuk ? esc(r.masuk) : '-'}</td><td style="${c}text-align:center">${r.pulang ? esc(r.pulang) : '-'}</td><td style="${c}text-align:center">${r.menit ? r.menit + ' mnt' : '-'}</td><td style="${c}">${esc(r.ket)}</td></tr>`).join('') || `<tr><td colspan="7" style="${c}text-align:center;color:#555">Tidak ada catatan presensi</td></tr>`;
+      return head + rows;
+    }).join('');
+    openModal(`
+      <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom no-print">
+        <div><h5 class="mb-0 fw-bold"><i class="bi bi-printer me-2"></i>Pratinjau Cetak Lengkap Presensi</h5>
+        <small class="text-muted">Berisi jam datang &amp; pulang setiap hari. Klik Cetak lalu pilih "Save as PDF".</small></div>
+        <div class="d-flex gap-2"><button type="button" class="btn-pri" onclick="window.print()"><i class="bi bi-printer-fill me-1"></i> Cetak Sekarang</button><button type="button" class="btn-out" onclick="closeModal()">Tutup</button></div>
+      </div>
+      <div class="rekap-print-doc" style="padding:10px;background:#fff;color:#000;border-radius:8px">
+        <div style="display:flex;align-items:center;gap:16px;border-bottom:3px double #000;padding-bottom:12px;margin-bottom:14px">
+          <img src="${LOGO}" alt="Logo" style="height:72px;width:72px;object-fit:contain">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:14px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">Pemerintah Kabupaten Tojo Una-Una</div>
+            <div style="font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">Dinas Pendidikan dan Kebudayaan</div>
+            <div style="font-size:18px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;margin:2px 0">SMP NEGERI 2 ULUBONGKA</div>
+            <div style="font-size:11px;color:#333">Jl. Gunung Katopas, No. 1, Desa Watusongu, Kec. Ulubongka, Kab. Tojo Una-una</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-size:15px;font-weight:bold;text-decoration:underline;text-transform:uppercase">LAPORAN LENGKAP PRESENSI SISWA (JAM DATANG &amp; PULANG)</div>
+          <div style="font-size:12px;margin-top:4px">Periode: <b>${periode}</b> &nbsp;|&nbsp; Kelas: <b>${filterKls}</b> &nbsp;|&nbsp; Hari Efektif: <b>${d.hari} Hari</b> &nbsp;|&nbsp; Jumlah Siswa: <b>${sw.length}</b></div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:18px">
+          <thead><tr style="background:#f1f5f9;color:#000"><th style="${c}width:30px">No</th><th style="${c}width:150px">Hari, Tanggal</th><th style="${c}width:70px">Status</th><th style="${c}width:75px">Jam Datang (WITA)</th><th style="${c}width:75px">Jam Pulang (WITA)</th><th style="${c}width:65px">Terlambat</th><th style="${c}text-align:left">Keterangan</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+        ${blokTtdHtml(sw, tglCetak)}
+      </div>`, 'modal-lg');
+  }).catch(() => {});
+}
+
 function cetakRekap() {
   const d = S.lastRekap;
   if (!d || !d.rows || !d.rows.length) {
@@ -1224,6 +1389,8 @@ function cetakRekap() {
       <td style="text-align:center">${r.sakit}</td>
       <td style="text-align:center">${r.alpa}</td>
       <td style="text-align:center;font-weight:bold">${r.pct}%</td>
+      <td style="text-align:center">${r.avg != null ? hm(r.avg) : '-'}</td>
+      <td style="text-align:center">${r.avgPulang != null ? hm(r.avgPulang) : '-'}</td>
     </tr>
   `).join('');
 
@@ -1276,6 +1443,8 @@ function cetakRekap() {
             <th style="border:1px solid #333;padding:6px 4px;text-align:center;width:45px">Sakit</th>
             <th style="border:1px solid #333;padding:6px 4px;text-align:center;width:45px">Alpa</th>
             <th style="border:1px solid #333;padding:6px 6px;text-align:center;width:65px">% Hadir</th>
+            <th style="border:1px solid #333;padding:6px 6px;text-align:center;width:70px">Rata² Datang</th>
+            <th style="border:1px solid #333;padding:6px 6px;text-align:center;width:70px">Rata² Pulang</th>
           </tr>
         </thead>
         <tbody>
@@ -1289,6 +1458,8 @@ function cetakRekap() {
             <td style="border:1px solid #333;padding:6px 4px;text-align:center">${totalI}</td>
             <td style="border:1px solid #333;padding:6px 4px;text-align:center">${totalS}</td>
             <td style="border:1px solid #333;padding:6px 4px;text-align:center">${totalA}</td>
+            <td style="border:1px solid #333;padding:6px 6px;text-align:center">-</td>
+            <td style="border:1px solid #333;padding:6px 6px;text-align:center">-</td>
             <td style="border:1px solid #333;padding:6px 6px;text-align:center">-</td>
           </tr>
         </tfoot>
@@ -1630,7 +1801,7 @@ function cetakRekapPelanggaran() {
       </table>
 
       <!-- Tanda Tangan Resmi -->
-      ${blokTtdHtml(d.rows, tglCetak)}
+      ${blokTtdPelHtml(d.rows, tglCetak)}
     </div>
   `;
 
@@ -1714,7 +1885,8 @@ function cetakKartuPerKelas(kls) {
 }
 
 //  Modul Data Siswa & Kartu Pelajar 
-function handleFotoInput(input) {
+function handleFotoInput(input, pfx) {
+  const PX = pfx || 'fsw';
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
   if (!file.type.startsWith('image/')) {
@@ -1741,9 +1913,9 @@ function handleFotoInput(input) {
       }
       ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-      const prev = $('fsw_foto_prev');
-      const ph = $('fsw_foto_ph');
-      const val = $('fsw_foto_val');
+      const prev = $(PX + '_foto_prev');
+      const ph = $(PX + '_foto_ph');
+      const val = $(PX + '_foto_val');
       if (prev) { prev.src = dataUrl; prev.style.display = 'block'; }
       if (ph) ph.style.display = 'none';
       if (val) val.value = dataUrl;
@@ -1753,12 +1925,13 @@ function handleFotoInput(input) {
   reader.readAsDataURL(file);
 }
 
-function hapusFotoSiswa() {
-  const prev = $('fsw_foto_prev');
-  const ph = $('fsw_foto_ph');
-  const val = $('fsw_foto_val');
-  const inp1 = $('fsw_foto_file');
-  const inp2 = $('fsw_foto_cam');
+function hapusFotoSiswa(pfx) {
+  const PX = pfx || 'fsw';
+  const prev = $(PX + '_foto_prev');
+  const ph = $(PX + '_foto_ph');
+  const val = $(PX + '_foto_val');
+  const inp1 = $(PX + '_foto_file');
+  const inp2 = $(PX + '_foto_cam');
   if (prev) { prev.src = ''; prev.style.display = 'none'; }
   if (ph) ph.style.display = 'flex';
   if (val) val.value = '';
@@ -2013,32 +2186,12 @@ function bukaFormSiswa(id, nis, nisn, nama, jk, kelas, hp, email, status, foto, 
       </div>
       <small class="mut d-block mb-2" style="font-size:11px">Laporan presensi harian &amp; pelanggaran siswa langsung dikirim ke WhatsApp orang tua ini.</small>
 
-      <div class="row g-2">
-        <div class="col-7">
-          <label for="fsw_wali">Nama Guru Wali Kelas</label>
-          <input id="fsw_wali" class="form-control" maxlength="80" value="${esc(wali || '')}" placeholder="Contoh: Nurul Hidayati, S.Pd">
-        </div>
-        <div class="col-5">
-          <label for="fsw_wawali">WhatsApp Wali Kelas</label>
-          <div class="input-group">
-            <span class="input-group-text bg-light text-success"><i class="bi bi-whatsapp"></i></span>
-            <input id="fsw_wawali" type="tel" class="form-control" value="${esc(waWali || '')}" placeholder="081234567890">
-          </div>
-        </div>
-      </div>
-      <div class="row g-2">
-        <div class="col-7">
-          <label for="fsw_nipwali">NIP Guru Wali Kelas</label>
-          <input id="fsw_nipwali" class="form-control" inputmode="numeric" maxlength="25" value="${esc(nipWali || '')}" placeholder="Contoh: 199104152020121007">
-        </div>
-        <div class="col-5">
-          <label for="fsw_status">Status</label>
-          <select id="fsw_status" class="form-select">
-            <option value="Aktif"${status !== 'Nonaktif' ? ' selected' : ''}>Aktif</option>
-            <option value="Nonaktif"${status === 'Nonaktif' ? ' selected' : ''}>Nonaktif</option>
-          </select>
-        </div>
-      </div>
+      <label for="fsw_status">Status</label>
+      <select id="fsw_status" class="form-select">
+        <option value="Aktif"${status !== 'Nonaktif' ? ' selected' : ''}>Aktif</option>
+        <option value="Nonaktif"${status === 'Nonaktif' ? ' selected' : ''}>Nonaktif</option>
+      </select>
+      <small class="mut d-block mt-2" style="font-size:11px"><i class="bi bi-person-badge me-1"></i>Wali kelas &amp; NIP otomatis mengikuti menu <b>Data Guru</b> sesuai kelas yang dipilih.</small>
 
       <div class="d-flex gap-2 justify-content-end mt-4">
         <button type="button" class="btn-out" onclick="closeModal()">Batal</button>
@@ -2060,9 +2213,6 @@ function simpanSiswa(e) {
     kelas: $('fsw_kelas').value.trim().toUpperCase(),
     hp: $('fsw_hp').value.trim(),
     status: $('fsw_status').value,
-    wali_kelas: $('fsw_wali').value.trim(),
-    wa_wali_kelas: $('fsw_wawali').value.trim(),
-    nip_wali_kelas: $('fsw_nipwali').value.trim(),
     tempat_lahir: $('fsw_tempat').value.trim(),
     tanggal_lahir: $('fsw_tgl').value,
     foto: $('fsw_foto_val').value.trim()
@@ -2381,6 +2531,313 @@ function unduhKartuSiswa(nis, nisn, nama, jk, kelas, qr, foto, tempat, tgl) {
 }
 
 //  Modul Kelola Akun 
+// ── Modul Prestasi Siswa & Rekap Prestasi ──
+function hariTgl(iso) {
+  const t = tglIndo(iso); if (!t) return esc(iso || '');
+  return NM_HARI[new Date(iso + 'T00:00:00Z').getUTCDay() || 7] + ', ' + t;
+}
+const bdgPr = j => `<span class="bs ${j === 'Akademik' ? 'ok' : 'wn'}"><i class="bi bi-${j === 'Akademik' ? 'mortarboard-fill' : 'trophy-fill'}"></i>${esc(j)}</span>`;
+function hariPr() { const t = $('pr_t'), h = $('pr_h'); if (h && t) h.textContent = t.value ? hariTgl(t.value) : ''; }
+function cariSiswaPr(q) {
+  clearTimeout(S.dqp);
+  const pid = $('pr_id'), pc = $('pr_c');
+  if (pid) pid.value = '';
+  if (q.length < 2) { if (pc) pc.innerHTML = ''; return; }
+  S.dqp = setTimeout(() => call('cari', { q }, { silent: true }).then(r => {
+    const el = $('pr_c'); if (!el) return;
+    el.innerHTML = (r || []).map(s => `<button type="button" data-id="${esc(s.id)}" data-n="${esc(s.nama)} (${esc(s.kelas)})" onclick="pickPr(this)">${esc(s.nama)} • Kelas ${esc(s.kelas)} • NIS: ${esc(s.nis)}</button>`).join('');
+  }).catch(() => {}), 300);
+}
+function pickPr(b) { $('pr_id').value = b.dataset.id; $('pr_s').value = b.dataset.n; $('pr_c').innerHTML = ''; }
+function savePrestasi(e) {
+  e.preventDefault();
+  const fm = e.target;
+  if (!$('pr_id').value) return toast('Pilih siswa dari daftar pencarian.', 'err');
+  go('prestasiSimpan', { id_siswa: $('pr_id').value, tanggal: $('pr_t').value, jenis: $('pr_j').value, nama_prestasi: $('pr_n').value.trim() }, r => {
+    fm.reset(); $('pr_id').value = ''; hariPr();
+    toast(r.msg || 'Prestasi tersimpan.', 'ok');
+    loadPrestasi();
+  });
+}
+function loadPrestasi() {
+  go('prestasiList', 0, l => {
+    if (S.curPage !== 'prestasi') return;
+    const el = $('pr_l'); if (!el) return;
+    const isAdmin = S.u && S.u.role === 'admin';
+    el.innerHTML = `<div class="cardx"><div class="d-flex justify-content-between align-items-center mb-3"><h6 class="fw-bold mb-0">Riwayat Prestasi Terbaru</h6><button type="button" class="btn-out btn-sm" onclick="nav('rekap_prestasi')"><i class="bi bi-table me-1"></i> Buka Rekap</button></div>${(l || []).map(r => `
+      <div class="li flex-wrap gap-2">
+        <div class="min-w-0 flex-grow-1">
+          <b>${esc(r.nama)}</b> <span class="bs mu" style="font-size:10px">${esc(r.kelas)}</span> ${bdgPr(r.jenis)}
+          <small class="mut">NIS: <b>${esc(r.nis)}</b></small>
+          <div class="mt-1 fw-bold" style="font-size:13px;color:var(--ok)"><i class="bi bi-award-fill me-1"></i>${esc(r.prestasi)}</div>
+          <small class="mut mt-1"><i class="bi bi-calendar3 me-1"></i>${hariTgl(r.tanggal)} • Pencatat: ${esc(r.guru)}</small>
+        </div>
+        ${isAdmin ? `<button class="btn-out text-danger py-1 px-2" style="min-height:32px" title="Hapus" onclick="hapusPrestasi('${esc(r.id)}','${esc(r.nama)}')"><i class="bi bi-trash"></i></button>` : ''}
+      </div>`).join('') || '<p class="mut mb-0">Belum ada catatan prestasi.</p>'}</div>`;
+  });
+}
+function loadRekapPrestasi() {
+  const l = $('rpr_list'); if (!l) return;
+  if (!l.firstElementChild || l.querySelector('.skl')) l.innerHTML = '<div class="skl"></div>';
+  go('rekapPrestasi', S.rk_pr, d => {
+    if (S.curPage !== 'rekap_prestasi') return;
+    d = d || { rows: [], kelas: [], total: 0, siswa: 0, akademik: 0, nonAkademik: 0 };
+    S.lastRekapPr = d;
+    const ks = $('rpr_k');
+    if (ks && ks.options.length <= 1 && d.kelas) { d.kelas.forEach(k => ks.add(new Option('Kelas ' + k, k))); ks.value = S.rk_pr.kelas; }
+    const kp = $('rpr_kpi');
+    if (kp) kp.innerHTML = `<div class="row g-2 mb-3">
+      <div class="col-6 col-md-3"><div class="cardx mb-0 text-center"><small class="mut">Total Prestasi</small><b style="color:var(--pri)">${d.total}</b></div></div>
+      <div class="col-6 col-md-3"><div class="cardx mb-0 text-center"><small class="mut">Siswa Berprestasi</small><b>${d.siswa}</b></div></div>
+      <div class="col-6 col-md-3"><div class="cardx mb-0 text-center"><small class="mut">Akademik</small><b style="color:var(--ok)">${d.akademik}</b></div></div>
+      <div class="col-6 col-md-3"><div class="cardx mb-0 text-center"><small class="mut">Non-Akademik</small><b style="color:#B87405">${d.nonAkademik}</b></div></div>
+    </div>`;
+    const el = $('rpr_list'); if (!el) return;
+    if (!d.rows || !d.rows.length) { el.innerHTML = '<div class="cardx text-center py-4 mut"><i class="bi bi-award text-warning fs-1 mb-2 d-block"></i>Belum ada data prestasi pada filter ini.</div>'; return; }
+    const isAdmin = S.u && S.u.role === 'admin';
+    const del = r => isAdmin ? `<button class="btn-out text-danger py-1 px-2" style="min-height:32px" title="Hapus" onclick="hapusPrestasi('${esc(r.id)}','${esc(r.nama)}')"><i class="bi bi-trash"></i></button>` : '';
+    el.innerHTML = `<div class="cardx">
+      <div class="d-flex justify-content-between align-items-center mb-2"><small class="mut">${d.rows.length} catatan prestasi</small><small class="mut d-md-none" style="font-size:11px"><i class="bi bi-arrow-left-right me-1"></i>Geser ke samping</small></div>
+      <div class="tw d-none d-md-block"><table class="tbl"><thead><tr><th style="width:40px">No</th><th>Hari, Tanggal</th><th>Nama &amp; NIS</th><th>Kelas</th><th>Jenis</th><th>Nama Prestasi</th>${isAdmin ? '<th class="text-end">Aksi</th>' : ''}</tr></thead><tbody>
+      ${d.rows.map((r, i) => `<tr><td>${i + 1}</td><td class="text-nowrap">${hariTgl(r.tanggal)}</td><td><b>${esc(r.nama)}</b><small class="mut">NIS: ${esc(r.nis)}</small></td><td><span class="bs mu">${esc(r.kelas)}</span></td><td>${bdgPr(r.jenis)}</td><td class="fw-semibold">${esc(r.prestasi)}</td>${isAdmin ? `<td class="text-end">${del(r)}</td>` : ''}</tr>`).join('')}
+      </tbody></table></div>
+      <div class="d-md-none">${d.rows.map(r => `<div class="mb-2 p-3 rounded-3 border" style="background:var(--card)">
+        <div class="d-flex justify-content-between gap-2"><div><b class="d-block">${esc(r.nama)}</b><small class="mut">NIS: ${esc(r.nis)} • Kelas ${esc(r.kelas)}</small></div>${bdgPr(r.jenis)}</div>
+        <div class="fw-bold mt-2" style="color:var(--ok)"><i class="bi bi-award-fill me-1"></i>${esc(r.prestasi)}</div>
+        <div class="d-flex justify-content-between align-items-center mt-2 small mut"><span><i class="bi bi-calendar3 me-1"></i>${hariTgl(r.tanggal)}</span>${del(r)}</div>
+      </div>`).join('')}</div></div>`;
+  });
+}
+function hapusPrestasi(id, nama) {
+  if (!confirm('Yakin ingin menghapus catatan prestasi siswa "' + nama + '"?')) return;
+  go('prestasiHapus', { id }, r => {
+    toast(r.msg || 'Catatan prestasi dihapus.', 'ok');
+    if (S.curPage === 'prestasi') loadPrestasi(); else loadRekapPrestasi();
+  });
+}
+function cetakRekapPrestasi() {
+  const d = S.lastRekapPr;
+  if (!d || !d.rows || !d.rows.length) return toast('Belum ada data prestasi untuk dicetak.', 'err');
+  const periode = d.bulan ? formatBulanIndo(d.bulan) : 'Semua Periode';
+  const filterKls = (S.rk_pr && S.rk_pr.kelas) ? 'Kelas ' + esc(S.rk_pr.kelas) : 'Semua Kelas';
+  const filterJns = (S.rk_pr && S.rk_pr.jenis) ? esc(S.rk_pr.jenis) : 'Akademik & Non-Akademik';
+  const tglCetak = formatTanggalIndo(new Date());
+  const th = 'border:1px solid #333;padding:6px 6px;';
+  const rowsHtml = d.rows.map((r, i) => `<tr><td style="text-align:center">${i + 1}</td><td style="white-space:nowrap">${hariTgl(r.tanggal)}</td><td style="text-align:center">${esc(r.nis)}</td><td><b>${esc(r.nama)}</b></td><td style="text-align:center">${esc(r.kelas)}</td><td style="text-align:center">${esc(r.jenis)}</td><td>${esc(r.prestasi)}</td></tr>`).join('');
+  openModal(`
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom no-print">
+      <div><h5 class="mb-0 fw-bold"><i class="bi bi-printer me-2 text-warning"></i>Pratinjau Cetak / Ekspor PDF Rekap Prestasi</h5>
+      <small class="text-muted">Klik Cetak lalu pilih "Save as PDF" untuk mengunduh berkas laporan resmi.</small></div>
+      <div class="d-flex gap-2"><button type="button" class="btn-pri" onclick="window.print()"><i class="bi bi-printer-fill me-1"></i> Cetak Sekarang</button><button type="button" class="btn-out" onclick="closeModal()">Tutup</button></div>
+    </div>
+    <div class="rekap-print-doc" style="padding:10px;background:#fff;color:#000;border-radius:8px">
+      <div style="display:flex;align-items:center;gap:16px;border-bottom:3px double #000;padding-bottom:12px;margin-bottom:14px">
+        <img src="${LOGO}" alt="Logo" style="height:72px;width:72px;object-fit:contain">
+        <div style="flex:1;text-align:center">
+          <div style="font-size:14px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">Pemerintah Kabupaten Tojo Una-Una</div>
+          <div style="font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase">Dinas Pendidikan dan Kebudayaan</div>
+          <div style="font-size:18px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;margin:2px 0">SMP NEGERI 2 ULUBONGKA</div>
+          <div style="font-size:11px;font-weight:normal;color:#333">Jl. Gunung Katopas, No. 1, Desa Watusongu, Kec. Ulubongka, Kab. Tojo Una-una</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:bold;text-decoration:underline;text-transform:uppercase">LAPORAN REKAPITULASI PRESTASI SISWA</div>
+        <div style="font-size:12px;margin-top:4px">Periode: <b>${periode}</b> &nbsp;|&nbsp; Kelas: <b>${filterKls}</b> &nbsp;|&nbsp; Jenis: <b>${filterJns}</b> &nbsp;|&nbsp; Total: <b>${d.total} Prestasi</b> (${d.siswa} Siswa)</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:18px">
+        <thead><tr style="background:#f1f5f9;color:#000">
+          <th style="${th}width:30px">No</th><th style="${th}width:130px">Hari, Tanggal</th><th style="${th}width:80px">NIS</th><th style="${th}text-align:left">Nama Siswa</th><th style="${th}width:55px">Kelas</th><th style="${th}width:90px">Jenis</th><th style="${th}text-align:left">Nama Prestasi</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      ${blokTtdHtml(d.rows, tglCetak)}
+    </div>
+  `, 'modal-lg');
+}
+
+// ── Modul Data Guru ──
+let _allGuru = [], _gSel = new Set(), _gRg = [], _gTaken = {};
+function loadGuru() {
+  const l = $('gr_list'); if (!l) return;
+  if (!l.firstElementChild || l.querySelector('.skl')) l.innerHTML = '<div class="skl"></div>';
+  go('guruList', 0, rows => {
+    if (S.curPage !== 'guru') return;
+    _allGuru = rows || [];
+    const k = $('gr_kpi');
+    if (k) k.innerHTML = `<div class="row g-2 mb-3">
+      <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Total Guru</small><b>${_allGuru.length}</b></div></div>
+      <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Wali Kelas</small><b style="color:var(--pri)">${_allGuru.filter(g => g.waliKelas).length}</b></div></div>
+      <div class="col-4"><div class="cardx mb-0 text-center"><small class="mut">Wali Murid</small><b style="color:var(--ok)">${_allGuru.filter(g => g.waliMurid).length}</b></div></div>
+    </div>`;
+    filterGuru();
+  });
+}
+function filterGuru() {
+  const q = $('gr_q') ? $('gr_q').value.trim().toLowerCase() : '', f = $('gr_f') ? $('gr_f').value : '';
+  renderGuruList(_allGuru.filter(g =>
+    (!q || (g.nama || '').toLowerCase().includes(q) || (g.nip || '').includes(q) || (g.jabatan || '').toLowerCase().includes(q)) &&
+    (!f || (f === 'wk' && g.waliKelas) || (f === 'wm' && g.waliMurid) || (f === 'no' && !g.waliKelas && !g.waliMurid))));
+}
+function guruFotoHtml(g, w, h) {
+  return `<div style="width:${w}px;height:${h}px;border-radius:4px;overflow:hidden;flex-shrink:0;background:#f1f5f9;border:1px solid #cbd5e1;display:flex;align-items:center;justify-content:center">${g.foto ? `<img src="${esc(g.foto)}" alt="${esc(g.nama)}" style="width:100%;height:100%;object-fit:cover">` : '<i class="bi bi-person-fill text-muted" style="font-size:20px"></i>'}</div>`;
+}
+function guruPeranHtml(g) {
+  const a = [];
+  if (g.waliKelas) a.push(`<span class="bs ok"><i class="bi bi-mortarboard-fill"></i> Wali Kelas ${esc(g.kelas)}</span>`);
+  if (g.waliMurid) {
+    const n = g.murid || [];
+    a.push(`<span class="bs iz"><i class="bi bi-people-fill"></i> Wali Murid (${n.length})</span>`);
+    if (n.length) a.push(`<small class="mut d-block mt-1" style="max-width:260px">${n.slice(0, 3).map(m => esc(m.nama)).join(', ')}${n.length > 3 ? ' +' + (n.length - 3) + ' lainnya' : ''}</small>`);
+  }
+  return a.length ? a.join(' ') : '<span class="mut small">-</span>';
+}
+function guruWaHtml(g) {
+  return g.hp ? `<a href="https://api.whatsapp.com/send?phone=${esc(g.hp.replace(/\D/g, '').replace(/^0/, '62'))}" target="_blank" class="btn-wa btn-wa-sm"><i class="bi bi-whatsapp"></i> ${esc(g.hp)}</a>` : '<span class="mut small">-</span>';
+}
+function renderGuruList(rows) {
+  const l = $('gr_list'); if (!l) return;
+  if (!rows || !rows.length) { l.innerHTML = '<div class="cardx text-center py-4 mut">Belum ada data guru yang cocok.</div>'; return; }
+  const isAdmin = S.u && S.u.role === 'admin';
+  const aksi = (g, sm) => isAdmin ? `
+    <button class="btn-out ${sm ? 'py-1 px-2' : 'me-1'}" style="min-height:${sm ? 36 : 34}px;padding:4px 10px;font-size:12px" title="Ubah" onclick="bukaFormGuru('${esc(g.id)}')"><i class="bi bi-pencil"></i></button>
+    <button class="btn-out text-danger ${sm ? 'py-1 px-2' : ''}" style="min-height:${sm ? 36 : 34}px;padding:4px 10px;font-size:12px" title="Hapus" onclick="hapusGuru('${esc(g.id)}','${esc(g.nama)}')"><i class="bi bi-trash"></i></button>` : '';
+  l.innerHTML = `<div class="cardx">
+    <div class="tw d-none d-md-block"><table class="tbl"><thead><tr>
+      <th style="width:40px">No</th><th>Foto &amp; Nama</th><th>NIP</th><th>Jabatan</th><th>No. HP</th><th>Peran</th>${isAdmin ? '<th class="text-end">Aksi</th>' : ''}
+    </tr></thead><tbody>
+    ${rows.map((g, i) => `<tr><td>${i + 1}</td>
+      <td><div class="d-flex align-items-center gap-2">${guruFotoHtml(g, 36, 48)}<b>${esc(g.nama)}</b></div></td>
+      <td>${esc(g.nip) || '<span class="mut">-</span>'}</td><td>${esc(g.jabatan) || '<span class="mut">-</span>'}</td>
+      <td>${guruWaHtml(g)}</td><td>${guruPeranHtml(g)}</td>
+      ${isAdmin ? `<td class="text-end text-nowrap">${aksi(g, false)}</td>` : ''}</tr>`).join('')}
+    </tbody></table></div>
+    <div class="d-md-none">
+    ${rows.map(g => `<div class="mb-2 p-3 rounded-3 border" style="background:var(--card)">
+      <div class="d-flex gap-2 align-items-start">${guruFotoHtml(g, 48, 64)}
+        <div class="min-w-0 flex-grow-1"><b class="d-block">${esc(g.nama)}</b>
+          <small class="mut d-block">${g.nip ? 'NIP: ' + esc(g.nip) : 'NIP: -'}${g.jabatan ? ' • ' + esc(g.jabatan) : ''}</small>
+          <div class="mt-1">${guruWaHtml(g)}</div></div></div>
+      <div class="mt-2">${guruPeranHtml(g)}</div>
+      ${isAdmin ? `<div class="d-flex gap-1 justify-content-end pt-2 mt-2 border-top">${aksi(g, true)}</div>` : ''}
+    </div>`).join('')}
+    </div></div>`;
+}
+function bukaFormGuru(id) {
+  busy(1);
+  call('siswaRingkas', 0, { silent: true }).then(list => { busy(0); _gRg = list || []; formGuru(id); })
+    .catch(e => { busy(0); toast((e && e.message) || 'Gagal memuat daftar siswa.', 'err'); });
+}
+function formGuru(id) {
+  const g = id ? (_allGuru.find(x => x.id === id) || {}) : {};
+  const lain = _allGuru.filter(x => x.id !== id);
+  const kelasAll = [...new Set(_gRg.map(s => s.kelas).filter(Boolean))].sort();
+  const kelasAmbil = {}; _gTaken = {};
+  lain.forEach(x => {
+    if (x.waliKelas && x.kelas) kelasAmbil[x.kelas.toUpperCase()] = x.nama;
+    (x.murid || []).forEach(m => { _gTaken[m.id] = x.nama; });
+  });
+  _gSel = new Set((g.murid || []).map(m => m.id));
+  const wk = !!g.waliKelas, wm = !!g.waliMurid, foto = g.foto || '';
+  openModal(`
+    <form onsubmit="simpanGuru(event)">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 fw-bold">${id ? 'Ubah Data Guru' : 'Tambah Guru Baru'}</h5>
+        <button type="button" class="btn-out" style="min-height:32px;padding:2px 8px" onclick="closeModal()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <input type="hidden" id="fg_id" value="${esc(id || '')}">
+      <label class="mb-1">Foto Guru (Rasio 3x4)</label>
+      <div class="d-flex align-items-center gap-3 mb-3 p-2 border rounded flex-wrap flex-sm-nowrap" style="background:var(--card)">
+        <div style="width:72px;height:96px;border:1px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:0 auto">
+          <img id="fg_foto_prev" src="${esc(foto)}" alt="Foto" style="width:100%;height:100%;object-fit:cover;${foto ? '' : 'display:none'}">
+          <div id="fg_foto_ph" style="text-align:center;color:#94a3b8;${foto ? 'display:none' : 'display:flex'};flex-direction:column;align-items:center"><i class="bi bi-person-bounding-box" style="font-size:28px"></i><span style="font-size:9px">Foto</span></div>
+        </div>
+        <div class="flex-grow-1 text-center text-sm-start">
+          <input type="hidden" id="fg_foto_val" value="${esc(foto)}">
+          <input type="file" id="fg_foto_cam" accept="image/png,image/jpeg,image/jpg" capture="user" style="display:none" onchange="handleFotoInput(this,'fg')">
+          <input type="file" id="fg_foto_file" accept="image/png,image/jpeg,image/jpg" style="display:none" onchange="handleFotoInput(this,'fg')">
+          <div class="d-flex gap-2 flex-wrap justify-content-center justify-content-sm-start">
+            <button type="button" class="btn-pri btn-sm" onclick="$('fg_foto_cam').click()"><i class="bi bi-camera-fill me-1"></i> Ambil Foto</button>
+            <button type="button" class="btn-out btn-sm" onclick="$('fg_foto_file').click()"><i class="bi bi-upload me-1"></i> Pilih Berkas</button>
+            <button type="button" class="btn-out btn-sm text-danger" onclick="hapusFotoSiswa('fg')"><i class="bi bi-trash"></i> Hapus</button>
+          </div>
+        </div>
+      </div>
+      <label for="fg_nama">Nama Lengkap &amp; Gelar <span class="text-danger">*</span></label>
+      <input id="fg_nama" class="form-control" required maxlength="100" value="${esc(g.nama || '')}" placeholder="Contoh: Nurul Hidayati, S.Pd">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6"><label for="fg_nip">NIP</label><input id="fg_nip" class="form-control" inputmode="numeric" maxlength="25" value="${esc(g.nip || '')}" placeholder="Contoh: 199104152020121007"></div>
+        <div class="col-12 col-sm-6"><label for="fg_hp">Nomor HP / WhatsApp</label><input id="fg_hp" type="tel" class="form-control" value="${esc(g.hp || '')}" placeholder="Contoh: 081234567890"></div>
+      </div>
+      <label for="fg_jab">Jabatan</label>
+      <input id="fg_jab" class="form-control" list="fg_jab_list" maxlength="80" value="${esc(g.jabatan || '')}" placeholder="Contoh: Guru Mata Pelajaran">
+      <datalist id="fg_jab_list"><option value="Kepala Sekolah"><option value="Wakil Kepala Sekolah"><option value="Guru Mata Pelajaran"><option value="Guru Kelas"><option value="Guru BK"><option value="Staf Tata Usaha"></datalist>
+
+      <div class="row g-2">
+        <div class="col-12 col-sm-6"><label for="fg_wk">Wali Kelas?</label>
+          <select id="fg_wk" class="form-select" onchange="togGuruPeran()"><option value="Tidak"${wk ? '' : ' selected'}>Tidak</option><option value="Ya"${wk ? ' selected' : ''}>Ya</option></select></div>
+        <div class="col-12 col-sm-6" id="fg_wk_box" style="${wk ? '' : 'display:none'}"><label for="fg_kelas">Kelas yang Dipegang</label>
+          <select id="fg_kelas" class="form-select"><option value="">— Pilih kelas —</option>${kelasAll.map(k => `<option value="${esc(k)}"${(g.kelas || '').toUpperCase() === k.toUpperCase() ? ' selected' : ''}${kelasAmbil[k.toUpperCase()] ? ' disabled' : ''}>${esc(k)}${kelasAmbil[k.toUpperCase()] ? ' (wali: ' + esc(kelasAmbil[k.toUpperCase()]) + ')' : ''}</option>`).join('')}</select></div>
+      </div>
+
+      <label for="fg_wm">Wali Murid?</label>
+      <select id="fg_wm" class="form-select" onchange="togGuruPeran()"><option value="Tidak"${wm ? '' : ' selected'}>Tidak</option><option value="Ya"${wm ? ' selected' : ''}>Ya</option></select>
+      <div id="fg_wm_box" class="mt-2 p-2 border rounded" style="${wm ? '' : 'display:none'};background:var(--card)">
+        <div class="row g-2 align-items-end">
+          <div class="col-5"><small class="mut">Kelas</small><select id="fg_mk" class="form-select" onchange="renderMuridPick()"><option value="">Semua</option>${kelasAll.map(k => `<option>${esc(k)}</option>`).join('')}</select></div>
+          <div class="col-7"><small class="mut">Cari nama / NIS</small><input id="fg_mq" class="form-control" oninput="renderMuridPick()" placeholder="Cari siswa..."></div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center my-2">
+          <small class="mut" id="fg_mc"></small>
+          <span><button type="button" class="btn-out btn-sm" style="min-height:30px;padding:2px 8px;font-size:12px" onclick="pilihSemuaMurid(true)">Pilih semua</button>
+          <button type="button" class="btn-out btn-sm" style="min-height:30px;padding:2px 8px;font-size:12px" onclick="pilihSemuaMurid(false)">Kosongkan</button></span>
+        </div>
+        <div id="fg_ml" style="max-height:220px;overflow-y:auto"></div>
+      </div>
+      <div class="d-flex gap-2 justify-content-end mt-4">
+        <button type="button" class="btn-out" onclick="closeModal()">Batal</button>
+        <button type="submit" class="btn-pri"><i class="bi bi-check-lg"></i> Simpan Guru</button>
+      </div>
+    </form>`);
+  if (wm) renderMuridPick();
+}
+function togGuruPeran() {
+  const wk = $('fg_wk').value === 'Ya', wm = $('fg_wm').value === 'Ya';
+  $('fg_wk_box').style.display = wk ? '' : 'none';
+  $('fg_wm_box').style.display = wm ? 'block' : 'none';
+  if (wm) renderMuridPick();
+}
+function muridCount() { const c = $('fg_mc'); if (c) c.textContent = _gSel.size + ' siswa dipilih'; }
+function renderMuridPick() {
+  const box = $('fg_ml'); if (!box) return;
+  const k = $('fg_mk') ? $('fg_mk').value : '', q = $('fg_mq') ? $('fg_mq').value.trim().toLowerCase() : '';
+  const list = _gRg.filter(s => (!k || s.kelas === k) && (!q || (s.nama || '').toLowerCase().includes(q) || (s.nis || '').includes(q)));
+  box.innerHTML = list.map(s => { const tk = _gTaken[s.id]; return `<label class="d-flex align-items-center gap-2 py-1 px-1" style="margin:0;font-weight:500;${tk ? 'opacity:.5' : 'cursor:pointer'}"><input type="checkbox" value="${esc(s.id)}"${_gSel.has(s.id) ? ' checked' : ''}${tk ? ' disabled' : ''} onchange="togMurid(this)"><span class="flex-grow-1">${esc(s.nama)} <span class="mut small">• ${esc(s.kelas)}</span></span>${tk ? `<small class="mut">wali: ${esc(tk)}</small>` : ''}</label>`; }).join('') || '<div class="mut small p-2">Tidak ada siswa.</div>';
+  muridCount();
+}
+function togMurid(cb) { if (cb.checked) _gSel.add(cb.value); else _gSel.delete(cb.value); muridCount(); }
+function pilihSemuaMurid(on) {
+  document.querySelectorAll('#fg_ml input[type=checkbox]:not(:disabled)').forEach(cb => { cb.checked = on; if (on) _gSel.add(cb.value); else _gSel.delete(cb.value); });
+  muridCount();
+}
+function simpanGuru(e) {
+  e.preventDefault();
+  const wk = $('fg_wk').value, wm = $('fg_wm').value;
+  if (wk === 'Ya' && !$('fg_kelas').value) return toast('Pilih kelas yang dipegang.', 'err');
+  if (wm === 'Ya' && !_gSel.size) return toast('Pilih minimal satu siswa yang diwalikan.', 'err');
+  const p = {
+    id: $('fg_id').value || undefined,
+    nama: $('fg_nama').value.trim(), nip: $('fg_nip').value.trim(), jabatan: $('fg_jab').value.trim(), hp: $('fg_hp').value.trim(),
+    foto: $('fg_foto_val').value.trim(),
+    wali_kelas: wk, kelas_wali: wk === 'Ya' ? $('fg_kelas').value : '',
+    wali_murid: wm, murid_wali: wm === 'Ya' ? [..._gSel].join(',') : ''
+  };
+  go('guruSimpan', p, r => { closeModal(); toast(r.msg || 'Data guru tersimpan.', 'ok'); loadGuru(); });
+}
+function hapusGuru(id, nama) {
+  if (!confirm('Yakin ingin menghapus data guru "' + nama + '"? Siswa dan kelas yang diwalikannya akan kembali tanpa wali.')) return;
+  go('guruHapus', { id }, r => { toast(r.msg || 'Data guru dihapus.', 'ok'); loadGuru(); });
+}
+
 let _allAkunRows = [];
 function filterAkun() {
   const q = $('ak_q') ? $('ak_q').value.trim().toLowerCase() : '';
