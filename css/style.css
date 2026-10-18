@@ -125,7 +125,7 @@ label{font-weight:600;font-size:13px;margin:12px 0 4px;display:block}
 .side a.on{background:var(--pri);color:#fff}
 
 @media(min-width:992px){
-  .side{display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;width:260px;background:var(--navy);padding:16px 12px;gap:4px;z-index:30}
+  .side{display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;width:260px;background:var(--navy);padding:16px 12px;gap:4px;z-index:30;overflow-y:auto;overflow-x:hidden}
   .main{margin-left:260px;padding:0 32px 32px}
   .bnav{display:none!important}
   .d-lg-none{display:none!important}
